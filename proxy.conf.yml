@@ -1,0 +1,85 @@
+
+logger:
+  console:
+    enabled: true
+    enable_color: true
+    log_level: 6
+    print_file: true
+
+prometheus:
+  path: /metrics
+  enabled: true
+  port: 2112
+  live_recalc: false
+  recalc_estab_timeout: 5s
+
+  static_labels:
+    server_name: PROXY
+
+profiler:
+  port: 2155
+  path: /pprof
+  enabled: true
+
+system:
+  listener:
+    http:
+      enabled: true
+      listen: 8080
+      timeout: 10s
+    https:
+      enabled: false
+      listen: 8443
+      pem_path: ./
+      key_path: ./
+      timeout: 10s
+    static_bindings:
+    - addr: wss://www.bitmex.com/realtime
+      port: 8991
+      schema: http
+    - addr: wss://testnet.bitmex.com/realtime
+      port: 8992
+      schema: http
+
+  proxy:
+    wrap_host_header: trad-proxy-url
+    http:
+      timeout: 10s
+      idle_timeout: 60s
+      conn_timeout: 5s
+      drop_headers:
+        - X-Real-IP
+    socket:
+      conn_timeout: 5s
+
+  round_robin_interfaces:
+     enabled: true
+     interfaces:
+      - 10.0.60.193
+      - 10.0.60.194
+      - 10.0.70.99
+      - 10.0.60.222
+      - 10.0.60.223
+      - 10.0.60.224
+      - 94.130.179.52
+      - 116.203.5.172
+      - 116.202.178.125
+      - 116.202.178.126
+      - 116.202.178.127
+      - 116.202.178.128
+      - 116.202.178.129
+      - 116.202.178.144
+      - 116.202.178.145
+      - 116.202.178.146
+      - 116.202.178.148
+      - 116.202.178.149
+      - 116.202.178.152
+      - 116.202.178.153
+      - 116.202.178.154
+      - 116.202.178.155
+      - 116.202.178.157
+      - 116.202.178.159
+      - 116.202.178.167
+      - 116.202.178.176
+      - 116.202.178.177
+
