@@ -4,14 +4,15 @@ import (
 	"crypto/tls"
 	"fmt"
 	"github.com/meklis/http-snmpwalk-proxy/logger"
+	"github.com/meklis/rri-proxy/config"
+	"github.com/meklis/rri-proxy/help"
+	rri_lib "github.com/meklis/rri-proxy/rri"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"io"
 	"net"
 	"net/http"
-	"rri-proxy/config"
-	"rri-proxy/help"
-	rri_lib "rri-proxy/rri"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -136,12 +137,16 @@ func (p *Proxy) Handle(w http.ResponseWriter, r *http.Request, method HandlingMe
 	}
 	iface := p.rri.GetDialByRequests()
 	iface.IncEstab()
+	p.dropRequestHeaders(r)
 	switch method {
 	case PRX_TUNNEL:
+		p.lg.DebugF("Using tunneling for proccesing request (%v -> %v%v)", r.RemoteAddr, r.URL.Host, r.URL.Path)
 		err, message, code = p.HandleTunneling(w, r, iface.Ip)
 	case PRX_HTTP:
+		p.lg.DebugF("Using HTTP for proccesing request (%v -> %v%v)", r.RemoteAddr, r.URL.Host, r.URL.Path)
 		err, message, code = p.HandleHTTP(w, r, iface.Ip)
 	case PRX_WS:
+		p.lg.DebugF("Using WS for proccesing request (%v -> %v%v)", r.RemoteAddr, r.URL.Host, r.URL.Path)
 		err, message, code = p.HandleWS(w, r, iface.Ip)
 	}
 	iface.DecEstab()
@@ -207,6 +212,9 @@ func (p *Proxy) HandleTunneling(w http.ResponseWriter, r *http.Request, ifaceIpA
 }
 
 func (p *Proxy) HandleHTTP(w http.ResponseWriter, req *http.Request, ifaceIpAddr string) (err error, message string, code int) {
+	redirectLimit := 0
+
+REDIRECTED_REQUEST:
 	p.lg.Debugf("new request - %v -> %v %v %v%v", req.RemoteAddr, req.Method, req.URL.Scheme, req.Host, req.URL.Path)
 	var DefaultTransport http.RoundTripper = &http.Transport{
 		DialContext: (&net.Dialer{
@@ -218,18 +226,30 @@ func (p *Proxy) HandleHTTP(w http.ResponseWriter, req *http.Request, ifaceIpAddr
 			FallbackDelay: 0,
 			KeepAlive:     p.conf.System.Proxy.HTTP.IdleTimeout,
 		}).DialContext,
-		ForceAttemptHTTP2:     true,
+		//ForceAttemptHTTP2:     true,
 		MaxIdleConns:          1000,
 		IdleConnTimeout:       90 * time.Second,
 		TLSHandshakeTimeout:   10 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
 	}
+	redirectLimit++
 	resp, err := DefaultTransport.RoundTrip(req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusServiceUnavailable)
 		p.lg.WarningF("err: http response - %v %v%v -> %v - %v", req.Method, req.Host, req.URL.Path, req.RemoteAddr, err.Error())
 		return err, "", 503
 	}
+
+	//Proxy Proccess redirects
+	if p.conf.System.Proxy.HTTP.ProccessRedirects && (resp.StatusCode == 302 || resp.StatusCode == 301) {
+		p.proccessRedirects(req, resp)
+		if redirectLimit < 5 {
+			goto REDIRECTED_REQUEST
+		} else {
+			p.lg.Errorf("[PROXY-HTTP] to many redirects to URL %v", resp.Header.Get("Location"))
+		}
+	}
+
 	p.lg.Debugf("http response (%v %v%v -> %v): - %v %v", req.Method, req.Host, req.URL.Path, req.RemoteAddr, resp.StatusCode, resp.Status)
 	defer resp.Body.Close()
 	p.copyHeader(w.Header(), resp.Header)
@@ -339,9 +359,9 @@ func (p *Proxy) HandleWS(w http.ResponseWriter, r *http.Request, ifaceIpAddr str
 }
 func (p *Proxy) copyHeader(dst, src http.Header) {
 	mustDrop := func(headerName string) bool {
-		for _, dropHeader := range p.conf.System.Proxy.HTTP.DropHeaders {
+		for _, dropHeader := range p.conf.System.Proxy.HTTP.DropResponseHeaders {
 			if headerName == dropHeader {
-				p.lg.Debugf("Drop header %v from request")
+				p.lg.Debugf("Drop header %v from request", headerName)
 				return true
 			}
 		}
@@ -353,6 +373,39 @@ func (p *Proxy) copyHeader(dst, src http.Header) {
 				continue
 			}
 			dst.Add(k, v)
+		}
+	}
+}
+
+func (p *Proxy) dropRequestHeaders(req *http.Request) {
+	for _, drop := range p.conf.System.Proxy.HTTP.DropRequestHeaders {
+		req.Header.Del(drop)
+	}
+}
+
+func (p *Proxy) proccessRedirects(req *http.Request, resp *http.Response) {
+	//Adding cookie to request
+	p.lg.DebugF("[PROXY-HTTP] Proccess redirects enabled, wrap headers")
+	if resp.Header.Get("Set-Cookie") != "" {
+		p.lg.DebugF("[PROXY-HTTP] Found cookie %v", resp.Header.Get("Set-Cookie"))
+		for _, cookie := range resp.Header.Values("Set-Cookie") {
+			cElems := strings.Split(cookie, ";")
+			if len(cElems) > 0 {
+				req.Header.Add("Cookie", cElems[0])
+			} else {
+				p.lg.Errorf("Error parse cookie")
+			}
+		}
+	}
+	//Change URL from Location header
+	if resp.Header.Get("Location") != "" {
+		p.lg.DebugF("[PROXY-HTTP] Found header Location, try parse URL for redirect request to '%v'", resp.Header.Get("Location"))
+		url, err := url.Parse(resp.Header.Get("Location"))
+		if err != nil {
+			p.lg.WarningF("[PROXY-HTTP] Error parse URL: '%v' for redirect", resp.Header.Get("Location"))
+		} else {
+			req.Host = url.Host
+			req.URL = url
 		}
 	}
 }

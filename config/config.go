@@ -55,10 +55,12 @@ type Configuration struct {
 		Proxy struct {
 			WrapHostHeader string `yaml:"wrap_host_header"`
 			HTTP           struct {
-				Timeout     time.Duration `yaml:"timeout"`
-				IdleTimeout time.Duration `yaml:"idle_timeout"`
-				ConnTimeout time.Duration `yaml:"conn_timeout"`
-				DropHeaders []string      `yaml:"drop_headers"`
+				Timeout             time.Duration `yaml:"timeout"`
+				IdleTimeout         time.Duration `yaml:"idle_timeout"`
+				ConnTimeout         time.Duration `yaml:"conn_timeout"`
+				DropRequestHeaders  []string      `yaml:"drop_request_headers"`
+				DropResponseHeaders []string      `yaml:"drop_response_headers"`
+				ProccessRedirects   bool          `yaml:"process_redirects"`
 			} `yaml:"http"`
 			Socket struct {
 				ConnTimeout time.Duration `yaml:"conn_timeout"`
