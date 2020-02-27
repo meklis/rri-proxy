@@ -1,22 +1,29 @@
 
+#Logger configuration
 logger:
   console:
     enabled: true
-    enable_color: true
-    log_level: 6
+    enable_color: false
+    #Log levels. For production use - level 4, debug - 6
+    log_level: 4
     print_file: true
+
+#Prometheus configuration
 
 prometheus:
   path: /metrics
   enabled: true
   port: 2112
+#Use live_recalc and recalc_estab_timeout for inc/dec established connection
   live_recalc: true
   recalc_estab_timeout: 5s
 
+#Profiler pprof. Must be disabled in production
 profiler:
   port: 2155
   path: /pprof
-  enabled: true
+  enabled: false
+
 
 system:
   listener:
@@ -32,20 +39,24 @@ system:
       timeout: 10s
 
   proxy:
-    wrap_host_header: proxy-url
+    #Header for wrap host and request URI
+    wrap_host_header: trad-proxy-url
     http:
       timeout: 10s
       idle_timeout: 60s
       conn_timeout: 5s
+    #Header for host wrapping must be dropped from request
       drop_request_headers:
-        - proxy-url
+        - trad-proxy-url
       drop_response_headers:
         - X-Real-IP
         - Set-Cookie
+    #Proccess HTTP requests with redirect 301|302
       process_redirects: true
     socket:
       conn_timeout: 5s
 
+  #Config for round-robin interfaces for send request
   round_robin_interfaces:
      enabled: false
      interfaces:

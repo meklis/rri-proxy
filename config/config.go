@@ -67,9 +67,14 @@ type Configuration struct {
 			} `yaml:"socket"`
 		} `yaml:"proxy"`
 		RRI struct {
-			Enabled      bool     `yaml:"enabled"`
-			MaxConnsByIp int      `yaml:"max_conns_by_ip"`
-			Interfaces   []string `yaml:"interfaces"`
+			Enabled       bool     `yaml:"enabled"`
+			MaxConnsByIp  int      `yaml:"max_conns_by_ip"`
+			Interfaces    []string `yaml:"interfaces"`
+			AutoDiscovery struct {
+				Enabled         bool     `yaml:"enabled"`
+				IgnoreLocalAddr bool     `yaml:"ignore_local_addr"`
+				InterfaceRegexp []string `yaml:"interface_regexp"`
+			} `yaml:"auto_discovery"`
 		} `yaml:"round_robin_interfaces"`
 	} `yaml:"system"`
 }
