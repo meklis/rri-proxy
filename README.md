@@ -20,7 +20,7 @@ Codename:       bionic
 ## Installation
 - Download and run installation script 
 ```
-wget https://github.com/meklis/rri-proxy/blob/master/deamon/install.sh
+wget https://raw.githubusercontent.com/meklis/rri-proxy/master/deamon/install.sh
 chmod +x ./install.sh
 ./install.sh
 ```
