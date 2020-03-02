@@ -21,7 +21,7 @@ CODE=0
 echo "Downloading binaries..."
 wget -O /usr/local/bin/rri-proxy https://github.com/meklis/rri-proxy/releases/download/$VERSION/rri-proxy-linux-amd64
 [ $? -eq 0 ]  || CODE=1
-wget -O "$CONF_FILE" https://github.com/meklis/rri-proxy/blob/$VERSION/proxy.conf.yml
+wget -O "$CONF_FILE" https://raw.githubusercontent.com/meklis/rri-proxy/$VERSION/proxy.conf.yml
 [ $? -eq 0 ]  || CODE=1
 chmod +x /usr/local/bin/rri-proxy
 
