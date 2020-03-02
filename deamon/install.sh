@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION=0.0.3
+VERSION=0.0.4
 CONF_FILE=/etc/rri-proxy/proxy.conf.yml
 
 echo "Installing rri-proxy, ver. $VERSION"
@@ -17,16 +17,25 @@ echo "Creating destination directory..."
 mkdir -p /etc/rri-proxy
 mkdir -p /usr/local/bin
 
-CODE=0
 echo "Downloading binaries..."
-wget -O /usr/local/bin/rri-proxy https://github.com/meklis/rri-proxy/releases/download/$VERSION/rri-proxy-linux-amd64
-[ $? -eq 0 ]  || CODE=1
+rm /tmp/rri-proxy-bin
+wget -O /tmp/rri-proxy-bin https://github.com/meklis/rri-proxy/releases/download/$VERSION/rri-proxy-linux-amd64
+STATUS_BIN=$?
 wget -O "$CONF_FILE" https://raw.githubusercontent.com/meklis/rri-proxy/$VERSION/proxy.conf.yml
-[ $? -eq 0 ]  || CODE=1
-chmod +x /usr/local/bin/rri-proxy
+STATUS_CONF=$?
 
+if  [ $STATUS_BIN -eq 0 ] && [ $STATUS_CONF -eq 0 ]
+then
+  echo "Success download! Install..."
+  echo "Check status of service"
+  systemctl status rri-proxy && systemctl stop rri-proxy && rm /usr/local/bin/rri-proxy
+  mv /tmp/rri-proxy-bin /usr/local/bin/rri-proxy
+  chmod +x /usr/local/bin/rri-proxy
+else
+  echo "Failed download binaries"
+  exit 2
+fi
 
-echo "Status code of downloading $CODE"
 echo ""
 echo "Register service in systemd..."
 echo "

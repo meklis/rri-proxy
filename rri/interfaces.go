@@ -27,7 +27,7 @@ type Interface struct {
 	sync.Mutex
 }
 
-func (i *Interface) IncEstab() {
+func (i *Interface) IncEstab() *Interface {
 	i.Lock()
 	defer i.Unlock()
 	if PromEnabled && PromLiveRecalc {
@@ -36,9 +36,21 @@ func (i *Interface) IncEstab() {
 		}).Inc()
 	}
 	i.EstabConnections++
+	return i
+}
+func (i *Interface) IncRequests() *Interface {
+	i.Lock()
+	defer i.Unlock()
+	if PromEnabled {
+		promRequests.With(map[string]string{
+			"addr": i.Ip,
+		}).Inc()
+	}
+	i.Requests++
+	return i
 }
 
-func (i *Interface) DecEstab() {
+func (i *Interface) DecEstab() *Interface {
 	i.Lock()
 	defer i.Unlock()
 	if PromEnabled && PromLiveRecalc {
@@ -47,6 +59,7 @@ func (i *Interface) DecEstab() {
 		}).Dec()
 	}
 	i.EstabConnections--
+	return i
 }
 
 var (
@@ -86,7 +99,7 @@ func (r *RRI) recalcProm(lg *logger.Logger) {
 		if PromLiveRecalc {
 			return
 		}
-		lg.NoticeF("[RRI] recalc prom estab conns")
+		lg.Debugf("[RRI] recalc prom estab conns")
 		estabs := make(map[string]int)
 		r.Lock()
 		for _, f := range r.interfaces {
@@ -114,19 +127,13 @@ func InitEmpty(lg *logger.Logger) *RRI {
 func (r *RRI) GetDialByRequests() *Interface {
 	r.Lock()
 	defer r.Unlock()
-	min := math.MaxInt32
+	max := math.MaxInt32
 	dialer := &Interface{}
 	for _, d := range r.interfaces {
-		if d.Requests < min {
+		if d.Requests <= max {
 			dialer = d
-			min = d.Requests
+			max = d.Requests
 		}
-	}
-	dialer.Requests++
-	if PromEnabled {
-		promRequests.With(map[string]string{
-			"addr": dialer.Ip,
-		}).Inc()
 	}
 	return dialer
 }
@@ -134,19 +141,17 @@ func (r *RRI) GetDialByRequests() *Interface {
 func (r *RRI) GetDialByConnections() *Interface {
 	r.Lock()
 	defer r.Unlock()
-	min := math.MaxInt32
+	max := 0
 	dialer := &Interface{}
 	for _, d := range r.interfaces {
-		if d.EstabConnections > min {
+		if dialer.Ip == "" {
 			dialer = d
-			min = d.Requests
+			max = d.EstabConnections
 		}
-	}
-	dialer.Requests++
-	if PromEnabled {
-		promRequests.With(map[string]string{
-			"addr": dialer.Ip,
-		}).Inc()
+		if d.EstabConnections <= max {
+			dialer = d
+			max = d.EstabConnections
+		}
 	}
 	return dialer
 }

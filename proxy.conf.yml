@@ -37,7 +37,13 @@ system:
       pem_path: ./
       key_path: ./
       timeout: 10s
-
+    static_bindings:
+      - addr: wss://www.bitmex.com/realtime
+        port: 8991
+        schema: http
+      - addr: wss://testnet.bitmex.com/realtime
+        port: 8992
+        schema: http
   proxy:
     #Header for wrap host and request URI
     wrap_host_header: trad-proxy-url
