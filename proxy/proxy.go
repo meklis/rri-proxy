@@ -135,17 +135,22 @@ func (p *Proxy) Handle(w http.ResponseWriter, r *http.Request, method HandlingMe
 	if !strings.Contains(r.Host, ":") {
 		r.Host = fmt.Sprintf("%v:%v", r.Host, help.GetDefaultPortFromScheme(r.URL.Scheme))
 	}
-	iface := p.rri.GetDialByRequests()
-	iface.IncEstab()
+	var iface *rri_lib.Interface
 	p.dropRequestHeaders(r)
 	switch method {
 	case PRX_TUNNEL:
+		iface = p.rri.GetDialByRequests()
+		iface.IncEstab()
 		p.lg.DebugF("Using tunneling for proccesing request (%v -> %v%v)", r.RemoteAddr, r.URL.Host, r.URL.Path)
 		err, message, code = p.HandleTunneling(w, r, iface.Ip)
 	case PRX_HTTP:
+		iface = p.rri.GetDialByRequests()
+		iface.IncEstab()
 		p.lg.DebugF("Using HTTP for proccesing request (%v -> %v%v)", r.RemoteAddr, r.URL.Host, r.URL.Path)
 		err, message, code = p.HandleHTTP(w, r, iface.Ip)
 	case PRX_WS:
+		iface = p.rri.GetDialByConnections()
+		iface.IncEstab()
 		p.lg.DebugF("Using WS for proccesing request (%v -> %v%v)", r.RemoteAddr, r.URL.Host, r.URL.Path)
 		err, message, code = p.HandleWS(w, r, iface.Ip)
 	}
