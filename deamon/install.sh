@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION=0.0.2
+VERSION=0.0.3
 CONF_FILE=/etc/rri-proxy/proxy.conf.yml
 
 echo "Installing rri-proxy, ver. $VERSION"
