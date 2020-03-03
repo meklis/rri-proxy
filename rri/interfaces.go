@@ -121,6 +121,11 @@ func InitEmpty(lg *logger.Logger) *RRI {
 	rri := new(RRI)
 	lg = lg
 	rri.interfaces = make([]*Interface, 0)
+	rri.interfaces = append(rri.interfaces, &Interface{
+		Requests:         0,
+		EstabConnections: 0,
+		Ip:               "",
+	})
 	go rri.recalcProm(lg)
 	return rri
 }

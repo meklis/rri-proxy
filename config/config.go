@@ -65,6 +65,7 @@ type Configuration struct {
 			Socket struct {
 				ConnTimeout         time.Duration `yaml:"conn_timeout"`
 				AnalizeStreamHeader bool          `yaml:"analize_stream_header"`
+				RriByEstabConns     bool          `yaml:"rri_by_estab_conns"`
 			} `yaml:"socket"`
 		} `yaml:"proxy"`
 		RRI struct {

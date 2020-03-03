@@ -159,12 +159,15 @@ func (p *Proxy) Handle(w http.ResponseWriter, r *http.Request, method HandlingMe
 			sendProm(fmt.Sprintf("%v", code), message)
 		}
 	case PRX_WS:
-		iface = p.rri.GetDialByConnections().IncRequests().IncEstab()
+		if p.conf.System.Proxy.Socket.RriByEstabConns {
+			iface = p.rri.GetDialByConnections().IncRequests().IncEstab()
+		} else {
+			iface = p.rri.GetDialByRequests().IncRequests().IncEstab()
+		}
 		p.lg.DebugF("Using WS for proccesing request (%v -> %v%v)", r.RemoteAddr, r.URL.Host, r.URL.Path)
 		p.HandleWS(w, r, iface.Ip)
 	}
 	iface.DecEstab()
-
 	return
 }
 func (p *Proxy) HandleTunneling(w http.ResponseWriter, r *http.Request, ifaceIpAddr string) (err error, message string, code int) {

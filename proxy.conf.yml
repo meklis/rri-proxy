@@ -62,10 +62,11 @@ system:
     socket:
       conn_timeout: 5s
       analize_stream_header: yes
+      rri_by_estab_conns: false
 
   #Config for round-robin interfaces for send request
   round_robin_interfaces:
-     enabled: true
+     enabled: false
      interfaces:
       - 10.0.60.193
       - 10.0.60.194
