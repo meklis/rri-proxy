@@ -411,3 +411,33 @@ func (p *Proxy) proccessRedirects(req *http.Request, resp *http.Response) {
 		}
 	}
 }
+
+/**
+@TODO Пример анализа ответа с сокета
+cpAnalize := func(dst io.Writer, src io.Reader) {
+	readBytes := make([]byte,1)
+	bytBuff := make([]byte, 1024)
+	buffer := bytes.NewBuffer(bytBuff)
+	for {
+		if _, e := src.Read(readBytes); e != nil {
+			p.lg.Debugf("copy err (%v -> %v): %v", r.RemoteAddr, r.Host, err)
+			errc <- streamErr{Err:err}
+			return
+		}
+		buffer.Write(readBytes)
+		if line := buffer.Bytes(); bytes.Contains(line, []byte("\n")) {
+			buffer.Reset()
+			if code, err := p.analizeLine(line); err != nil {
+				errc <- streamErr{Err: err, Code: code }
+				return
+			}
+		}
+		if _, e := dst.Write(readBytes); e != nil {
+			p.lg.Debugf("copy err (%v -> %v): %v", r.RemoteAddr, r.Host, err)
+			errc <- streamErr{Err: err}
+			return
+		}
+	}
+}
+
+*/
