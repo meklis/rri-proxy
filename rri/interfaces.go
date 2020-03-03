@@ -4,8 +4,8 @@ import (
 	"github.com/meklis/http-snmpwalk-proxy/logger"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"math"
 	"net"
+	"sort"
 	"sync"
 	"time"
 )
@@ -14,6 +14,7 @@ type RRI struct {
 	lg         *logger.Logger
 	interfaces []*Interface
 	sync.Mutex
+	lastIpByEstab string
 }
 
 var PromEnabled bool
@@ -127,33 +128,24 @@ func InitEmpty(lg *logger.Logger) *RRI {
 func (r *RRI) GetDialByRequests() *Interface {
 	r.Lock()
 	defer r.Unlock()
-	max := math.MaxInt32
-	dialer := &Interface{}
-	for _, d := range r.interfaces {
-		if d.Requests <= max {
-			dialer = d
-			max = d.Requests
-		}
-	}
-	return dialer
+	sort.Slice(r.interfaces, func(i, j int) bool {
+		return r.interfaces[i].Requests < r.interfaces[j].Requests
+	})
+	return r.interfaces[0]
 }
 
 func (r *RRI) GetDialByConnections() *Interface {
 	r.Lock()
 	defer r.Unlock()
-	max := 0
-	dialer := &Interface{}
-	for _, d := range r.interfaces {
-		if dialer.Ip == "" {
-			dialer = d
-			max = d.EstabConnections
-		}
-		if d.EstabConnections <= max {
-			dialer = d
-			max = d.EstabConnections
-		}
-	}
-	return dialer
+	//Sort by requests
+	sort.Slice(r.interfaces, func(i, j int) bool {
+		return r.interfaces[i].Requests < r.interfaces[j].Requests
+	})
+	//Sort by connections
+	sort.Slice(r.interfaces, func(i, j int) bool {
+		return r.interfaces[i].EstabConnections < r.interfaces[j].EstabConnections
+	})
+	return r.interfaces[0]
 }
 
 func ValidateIp(IP string) bool {

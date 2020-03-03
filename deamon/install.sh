@@ -57,7 +57,7 @@ WantedBy=multi-user.target
 systemctl enable rri-proxy
 
 echo "Installation finished!"
-echo ""
+echo "Service not started automaticaly"
 echo "Command for get service status:"
 echo "    systemctl status rri-proxy"
 echo ""

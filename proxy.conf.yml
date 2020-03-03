@@ -5,7 +5,7 @@ logger:
     enabled: true
     enable_color: false
     #Log levels. For production use - level 4, debug - 6
-    log_level: 4
+    log_level: 6
     print_file: true
 
 #Prometheus configuration
@@ -61,10 +61,11 @@ system:
       process_redirects: true
     socket:
       conn_timeout: 5s
+      analize_stream_header: yes
 
   #Config for round-robin interfaces for send request
   round_robin_interfaces:
-     enabled: false
+     enabled: true
      interfaces:
       - 10.0.60.193
       - 10.0.60.194

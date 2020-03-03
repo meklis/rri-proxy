@@ -63,7 +63,8 @@ type Configuration struct {
 				ProccessRedirects   bool          `yaml:"process_redirects"`
 			} `yaml:"http"`
 			Socket struct {
-				ConnTimeout time.Duration `yaml:"conn_timeout"`
+				ConnTimeout         time.Duration `yaml:"conn_timeout"`
+				AnalizeStreamHeader bool          `yaml:"analize_stream_header"`
 			} `yaml:"socket"`
 		} `yaml:"proxy"`
 		RRI struct {
