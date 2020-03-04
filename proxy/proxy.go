@@ -134,13 +134,14 @@ func (p *Proxy) Handle(w http.ResponseWriter, r *http.Request, method HandlingMe
 		promHttpRequestsCount.With(labels).Inc()
 		promHttpRequestsDurationSec.With(labels).Add(getDurationSec())
 	}
-	if !strings.Contains(r.Host, ":") {
-		r.Host = fmt.Sprintf("%v:%v", r.Host, help.GetDefaultPortFromScheme(r.URL.Scheme))
-	}
+
 	var iface *rri_lib.Interface
 	p.dropRequestHeaders(r)
 	switch method {
 	case PRX_TUNNEL:
+		if !strings.Contains(r.Host, ":") {
+			r.Host = fmt.Sprintf("%v:%v", r.Host, help.GetDefaultPortFromScheme(r.URL.Scheme))
+		}
 		iface = p.rri.GetDialByRequests().IncRequests().IncEstab()
 		p.lg.DebugF("Using tunneling for proccesing request (%v -> %v%v)", r.RemoteAddr, r.URL.Host, r.URL.Path)
 		err, message, code = p.HandleTunneling(w, r, iface.Ip)
@@ -159,6 +160,9 @@ func (p *Proxy) Handle(w http.ResponseWriter, r *http.Request, method HandlingMe
 			sendProm(fmt.Sprintf("%v", code), message)
 		}
 	case PRX_WS:
+		if !strings.Contains(r.Host, ":") {
+			r.Host = fmt.Sprintf("%v:%v", r.Host, help.GetDefaultPortFromScheme(r.URL.Scheme))
+		}
 		if p.conf.System.Proxy.Socket.RriByEstabConns {
 			iface = p.rri.GetDialByConnections().IncRequests().IncEstab()
 		} else {
@@ -244,6 +248,7 @@ REDIRECTED_REQUEST:
 		ExpectContinueTimeout: 1 * time.Second,
 	}
 	redirectLimit++
+	//req.URL, _ = url.Parse("https://api.huobi.pro/v1/account/accounts?AccessKeyId=cdddd33a-7f81d950-bvrge3rf7j-2370f&SignatureMethod=HmacSHA256&SignatureVersion=2&Timestamp=2020-03-04T14%3A43%3A44&Signature=Hh2Br4TupJ2Z7OzDzZq5SHDvy7iSGE4clLPE69ci%2FaM%3D")
 	resp, err := DefaultTransport.RoundTrip(req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusServiceUnavailable)

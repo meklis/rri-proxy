@@ -56,7 +56,6 @@ system:
         - trad-proxy-url
       drop_response_headers:
         - X-Real-IP
-        - Set-Cookie
     #Proccess HTTP requests with redirect 301|302
       process_redirects: true
     socket:
