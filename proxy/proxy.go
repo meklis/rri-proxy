@@ -102,7 +102,7 @@ func Init(conf *config.Configuration, lg *logger.Logger, rri *rri_lib.RRI) *Prox
 	return prx
 }
 
-func (p *Proxy) Handle(w http.ResponseWriter, r *http.Request, method HandlingMethod) {
+func (p *Proxy) Handle(w http.ResponseWriter, r *http.Request) {
 	var err error
 	var code int
 	var message string
@@ -137,11 +137,7 @@ func (p *Proxy) Handle(w http.ResponseWriter, r *http.Request, method HandlingMe
 
 	var iface *rri_lib.Interface
 	p.dropRequestHeaders(r)
-	switch method {
-	case PRX_TUNNEL:
-		if !strings.Contains(r.Host, ":") {
-			r.Host = fmt.Sprintf("%v:%v", r.Host, help.GetDefaultPortFromScheme(r.URL.Scheme))
-		}
+	if r.Method == http.MethodConnect {
 		iface = p.rri.GetDialByRequests().IncRequests().IncEstab()
 		p.lg.DebugF("Using tunneling for proccesing request (%v -> %v%v)", r.RemoteAddr, r.URL.Host, r.URL.Path)
 		err, message, code = p.HandleTunneling(w, r, iface.Ip)
@@ -150,7 +146,15 @@ func (p *Proxy) Handle(w http.ResponseWriter, r *http.Request, method HandlingMe
 		} else {
 			sendProm(fmt.Sprintf("%v", code), message)
 		}
-	case PRX_HTTP:
+	} else if r.URL.Scheme == "ws" || r.URL.Scheme == "wss" {
+		if p.conf.System.Proxy.Socket.RriByEstabConns {
+			iface = p.rri.GetDialByConnections().IncRequests().IncEstab()
+		} else {
+			iface = p.rri.GetDialByRequests().IncRequests().IncEstab()
+		}
+		p.lg.DebugF("Using WS for proccesing request (%v -> %v%v)", r.RemoteAddr, r.URL.Host, r.URL.Path)
+		p.HandleWS(w, r, iface.Ip)
+	} else {
 		iface = p.rri.GetDialByRequests().IncRequests().IncEstab()
 		p.lg.DebugF("Using HTTP for proccesing request (%v -> %v%v)", r.RemoteAddr, r.URL.Host, r.URL.Path)
 		err, message, code = p.HandleHTTP(w, r, iface.Ip)
@@ -159,22 +163,14 @@ func (p *Proxy) Handle(w http.ResponseWriter, r *http.Request, method HandlingMe
 		} else {
 			sendProm(fmt.Sprintf("%v", code), message)
 		}
-	case PRX_WS:
-		if !strings.Contains(r.Host, ":") {
-			r.Host = fmt.Sprintf("%v:%v", r.Host, help.GetDefaultPortFromScheme(r.URL.Scheme))
-		}
-		if p.conf.System.Proxy.Socket.RriByEstabConns {
-			iface = p.rri.GetDialByConnections().IncRequests().IncEstab()
-		} else {
-			iface = p.rri.GetDialByRequests().IncRequests().IncEstab()
-		}
-		p.lg.DebugF("Using WS for proccesing request (%v -> %v%v)", r.RemoteAddr, r.URL.Host, r.URL.Path)
-		p.HandleWS(w, r, iface.Ip)
 	}
 	iface.DecEstab()
 	return
 }
 func (p *Proxy) HandleTunneling(w http.ResponseWriter, r *http.Request, ifaceIpAddr string) (err error, message string, code int) {
+	if !strings.Contains(r.Host, ":") {
+		r.Host = fmt.Sprintf("%v:%v", r.Host, help.GetDefaultPortFromScheme(r.URL.Scheme))
+	}
 	dial := net.Dialer{
 		Timeout:  p.conf.System.Proxy.HTTP.ConnTimeout,
 		Deadline: time.Time{},
@@ -274,6 +270,9 @@ REDIRECTED_REQUEST:
 	return nil, fmt.Sprintf("%v", resp.Status), resp.StatusCode
 }
 func (p *Proxy) HandleWS(w http.ResponseWriter, r *http.Request, ifaceIpAddr string) {
+	if !strings.Contains(r.Host, ":") {
+		r.Host = fmt.Sprintf("%v:%v", r.Host, help.GetDefaultPortFromScheme(r.URL.Scheme))
+	}
 	labels := make(map[string]string)
 	labels = map[string]string{
 		"host":          r.Host,

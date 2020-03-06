@@ -155,18 +155,13 @@ func getServer(prx *proxy.Proxy, replAddr string, listenPort int) *http.Server {
 	return &http.Server{
 		Addr: fmt.Sprintf(":%v", listenPort),
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			//Подменяем адрес, если есть заголовок
 			if err := replaceHost(r, replAddr); err != nil {
 				w.WriteHeader(400)
 				w.Write([]byte(fmt.Sprintf("Incorrect header %v", Config.System.Listener.HTTP.Listen)))
 				return
 			}
-			if r.Method == http.MethodConnect {
-				prx.Handle(w, r, proxy.PRX_TUNNEL)
-			} else if r.URL.Scheme == "ws" || r.URL.Scheme == "wss" {
-				prx.Handle(w, r, proxy.PRX_WS)
-			} else {
-				prx.Handle(w, r, proxy.PRX_HTTP)
-			}
+			prx.Handle(w, r)
 		}),
 		// Disable HTTP/2.
 		TLSNextProto: make(map[string]func(*http.Server, *tls.Conn, http.Handler)),
